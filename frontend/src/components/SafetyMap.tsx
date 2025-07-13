@@ -3,7 +3,10 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MapPin, Navigation, Map } from 'lucide-react';
+import GoogleMapComponent from './GoogleMap';
+import RouteCalculator from './RouteCalculator';
 
 interface SafetyZone {
   id: string;
@@ -15,6 +18,7 @@ interface SafetyZone {
 
 const SafetyMap = () => {
   const [selectedZone, setSelectedZone] = useState<SafetyZone | null>(null);
+  const [activeView, setActiveView] = useState<'overview' | 'interactive'>('overview');
 
   const safetyZones: SafetyZone[] = [
     { id: '1', name: 'Downtown Core', riskLevel: 'low', incidents: 2, lastUpdated: '5 min ago' },
@@ -44,145 +48,169 @@ const SafetyMap = () => {
   };
 
   return (
-    <div className="grid lg:grid-cols-3 gap-6">
-      {/* Map Visualization */}
-      <div className="lg:col-span-2">
-        <Card className="h-96 border-2 border-empowerment-violet/30">
-          <CardHeader className="empowerment-gradient text-white">
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5" />
-              Live Safety Heatmap
-              <Badge variant="outline" className="ml-auto bg-white/20 text-white border-white/30">Real-time</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="relative h-64 bg-gradient-to-br from-empowerment-violet/5 to-careful-pink/10 overflow-hidden">
-              {/* Simulated Map with 3x2 Grid Layout */}
-              <div className="absolute inset-0 p-4">
-                <div className="grid grid-cols-3 grid-rows-2 gap-2 h-full">
-                  {/* Top Row - 3 zones */}
-                  {safetyZones.slice(0, 3).map((zone, index) => (
-                    <div
-                      key={zone.id}
-                      className={`relative rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg ${getRiskColor(zone.riskLevel)} opacity-80 hover:opacity-95`}
-                      onClick={() => setSelectedZone(zone)}
-                    >
-                      <div className="absolute inset-2 bg-white/25 rounded flex items-center justify-center backdrop-blur-sm">
-                        <div className="text-center text-white text-sm font-medium drop-shadow-lg">
-                          <div className="text-xs opacity-90 font-semibold">{zone.name}</div>
-                          <div className="text-lg font-bold">{zone.incidents}</div>
-                          <div className="text-xs opacity-75">incidents</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Bottom Row - 3 zones */}
-                  {safetyZones.slice(3, 6).map((zone, index) => (
-                    <div
-                      key={zone.id}
-                      className={`relative rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg ${getRiskColor(zone.riskLevel)} opacity-80 hover:opacity-95`}
-                      onClick={() => setSelectedZone(zone)}
-                    >
-                      <div className="absolute inset-2 bg-white/25 rounded flex items-center justify-center backdrop-blur-sm">
-                        <div className="text-center text-white text-sm font-medium drop-shadow-lg">
-                          <div className="text-xs opacity-90 font-semibold">{zone.name}</div>
-                          <div className="text-lg font-bold">{zone.incidents}</div>
-                          <div className="text-xs opacity-75">incidents</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Legend - Moved down to avoid covering riverside park */}
-              <div className="absolute bottom-2 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-empowerment-violet/20">
-                <div className="text-xs font-semibold mb-2 text-empowerment-violet">Risk Level</div>
-                <div className="flex gap-3">
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 zone-safe rounded"></div>
-                    <span className="text-xs font-medium">Safe</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 zone-moderate rounded"></div>
-                    <span className="text-xs font-medium">Moderate</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 zone-danger rounded"></div>
-                    <span className="text-xs font-medium">High Risk</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+    <div className="space-y-6">
+      {/* Map Type Selector */}
+      <div className="flex justify-center">
+        <Tabs value={activeView} onValueChange={(value) => setActiveView(value as 'overview' | 'interactive')} className="w-full">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 bg-purple-100">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+              <Map className="w-4 h-4 mr-2" />
+              Safety Overview
+            </TabsTrigger>
+            <TabsTrigger value="interactive" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+              <Navigation className="w-4 h-4 mr-2" />
+              Interactive Map
+            </TabsTrigger>
+          </TabsList>
 
-      {/* Zone Details */}
-      <div className="space-y-4">
-        <Card className="border-2 border-purple-200">
-          <CardHeader className="safety-gradient text-white">
-            <CardTitle className="text-lg">Zone Details</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            {selectedZone ? (
+          <TabsContent value="overview" className="mt-6">
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Map Visualization */}
+              <div className="lg:col-span-2">
+                <Card className="h-96 border-2 border-empowerment-violet/30">
+                  <CardHeader className="empowerment-gradient text-white">
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="w-5 h-5" />
+                      Live Safety Heatmap
+                      <Badge variant="outline" className="ml-auto bg-white/20 text-white border-white/30">Real-time</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="relative h-64 bg-gradient-to-br from-empowerment-violet/5 to-careful-pink/10 overflow-hidden">
+                      {/* Simulated Map with 3x2 Grid Layout */}
+                      <div className="absolute inset-0 p-4">
+                        <div className="grid grid-cols-3 grid-rows-2 gap-2 h-full">
+                          {/* Top Row - 3 zones */}
+                          {safetyZones.slice(0, 3).map((zone, index) => (
+                            <div
+                              key={zone.id}
+                              className={`relative rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg ${getRiskColor(zone.riskLevel)} opacity-80 hover:opacity-95`}
+                              onClick={() => setSelectedZone(zone)}
+                            >
+                              <div className="absolute inset-2 bg-white/25 rounded flex items-center justify-center backdrop-blur-sm">
+                                <div className="text-center text-white text-sm font-medium drop-shadow-lg">
+                                  <div className="text-xs opacity-90 font-semibold">{zone.name}</div>
+                                  <div className="text-lg font-bold">{zone.incidents}</div>
+                                  <div className="text-xs opacity-75">incidents</div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          
+                          {/* Bottom Row - 3 zones */}
+                          {safetyZones.slice(3, 6).map((zone, index) => (
+                            <div
+                              key={zone.id}
+                              className={`relative rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg ${getRiskColor(zone.riskLevel)} opacity-80 hover:opacity-95`}
+                              onClick={() => setSelectedZone(zone)}
+                            >
+                              <div className="absolute inset-2 bg-white/25 rounded flex items-center justify-center backdrop-blur-sm">
+                                <div className="text-center text-white text-sm font-medium drop-shadow-lg">
+                                  <div className="text-xs opacity-90 font-semibold">{zone.name}</div>
+                                  <div className="text-lg font-bold">{zone.incidents}</div>
+                                  <div className="text-xs opacity-75">incidents</div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Legend - Moved down to avoid covering riverside park */}
+                      <div className="absolute bottom-2 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-empowerment-violet/20">
+                        <div className="text-xs font-semibold mb-2 text-empowerment-violet">Risk Level</div>
+                        <div className="flex gap-3">
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 zone-safe rounded"></div>
+                            <span className="text-xs font-medium">Safe</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 zone-moderate rounded"></div>
+                            <span className="text-xs font-medium">Moderate</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 zone-danger rounded"></div>
+                            <span className="text-xs font-medium">High Risk</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Zone Details */}
               <div className="space-y-4">
-                <div>
-                  <h3 className="font-bold text-lg text-purple-800">{selectedZone.name}</h3>
-                  <Badge className={`${getRiskBadge(selectedZone.riskLevel)} font-semibold`}>
-                    {selectedZone.riskLevel.toUpperCase()} RISK
-                  </Badge>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">Active Incidents:</span>
-                    <span className="font-bold text-lg text-purple-700">{selectedZone.incidents}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">Last Updated:</span>
-                    <span className="font-semibold text-purple-600">{selectedZone.lastUpdated}</span>
-                  </div>
-                </div>
+                <Card className="border-2 border-purple-200">
+                  <CardHeader className="safety-gradient text-white">
+                    <CardTitle className="text-lg">Zone Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    {selectedZone ? (
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="font-bold text-lg text-purple-800">{selectedZone.name}</h3>
+                          <Badge className={`${getRiskBadge(selectedZone.riskLevel)} font-semibold`}>
+                            {selectedZone.riskLevel.toUpperCase()} RISK
+                          </Badge>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground font-medium">Active Incidents:</span>
+                            <span className="font-bold text-lg text-purple-700">{selectedZone.incidents}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground font-medium">Last Updated:</span>
+                            <span className="font-semibold text-purple-600">{selectedZone.lastUpdated}</span>
+                          </div>
+                        </div>
 
-                <Button variant="outline" className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400 font-semibold">
-                  Avoid This Area
-                </Button>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50 text-purple-400" />
-                <p className="font-medium">Click on a zone to view details</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                        <Button variant="outline" className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400 font-semibold">
+                          Avoid This Area
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50 text-purple-400" />
+                        <p className="font-medium">Click on a zone to view details</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-        {/* Quick Stats */}
-        <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200">
-          <CardHeader className="safety-gradient text-white">
-            <CardTitle className="text-lg">City Safety Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 p-6">
-            <div className="flex justify-between items-center">
-              <span className="text-purple-700 font-medium">Overall Safety Score</span>
-              <Badge className="bg-green-500 text-white font-bold text-sm px-3 py-1">87/100</Badge>
+                {/* Quick Stats */}
+                <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200">
+                  <CardHeader className="safety-gradient text-white">
+                    <CardTitle className="text-lg">City Safety Overview</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 p-6">
+                    <div className="flex justify-between items-center">
+                      <span className="text-purple-700 font-medium">Overall Safety Score</span>
+                      <Badge className="bg-green-500 text-white font-bold text-sm px-3 py-1">87/100</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-purple-700 font-medium">Active Incidents</span>
+                      <span className="font-bold text-lg text-purple-800">30</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-purple-700 font-medium">Safe Routes Available</span>
+                      <span className="font-bold text-lg text-purple-800">142</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-purple-700 font-medium">Community Reports</span>
+                      <span className="font-bold text-lg text-purple-800">68 today</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-purple-700 font-medium">Active Incidents</span>
-              <span className="font-bold text-lg text-purple-800">30</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-purple-700 font-medium">Safe Routes Available</span>
-              <span className="font-bold text-lg text-purple-800">142</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-purple-700 font-medium">Community Reports</span>
-              <span className="font-bold text-lg text-purple-800">68 today</span>
-            </div>
-          </CardContent>
-        </Card>
+          </TabsContent>
+
+          <TabsContent value="interactive" className="mt-6">
+            <RouteCalculator />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
